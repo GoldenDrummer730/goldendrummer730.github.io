@@ -149,7 +149,7 @@ function ready(error, us) {
   var states = topojson.feature(us, us.objects.states).features;
 
   var data = [];
-  d3.csv("/data/Minimum_Wage_Data.csv", function(d){
+  d3.csv("Minimum_Wage_Data.csv", function(d){
     for(i = 0; i < d.length; i++){
 		if(d[i].state == "District of Columbia" || d[i].state == "Federal (FLSA)")
 			continue;
