@@ -1,148 +1,277 @@
+<DOCTYPE html>
+<meta charset="utf-8">
 <html>
-  <style>
+<head>
 
-  #states {
-    fill: #BBB;
-  }
-
-  #states .hover {
-    fill: orange;
-  }
-
-  #state-borders {
-    fill: none;
-    stroke: #000;
-    stroke-width: 1.5px;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-    pointer-events: none;
-  }
-
-  #canvas {
-    position: relative;
-  }
-
-  div.tooltips {
-    position: absolute;
-    text-align: center;
-    width: 60px;
-    height: 28px;
-    padding: 2px;
-    font: 12px sans-serif;
-    background: steelblue;
-    color: white;
-    border: 0px;
-    border-radius: 3px;
-    pointer-events: none;
-    top: 0;
-    left: 0;
-  }
-
-  </style>
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:400italic,600italic,700italic,200,300,400,600,700,900">
+<script src="http://d3js.org/d3.v3.min.js"  charset="utf-8"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
+<script src="http://d3js.org/topojson.v2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
 
 
-<body>
-    <div class = "container">
-      <div class = "row align-items center">
-        <div class="col-sm-2">
-          <p id="value-time">0</p>
-        </div>
-        <div class="col-sm">
-          <div id="slider-time"></div>
-        </div>
-      </div>
-    </div>
+<style>
 
-  <script src = "https://d3js.org/d3.v4.min.js"></script>
-  <script src="https://unpkg.com/d3-simple-slider"></script>
-  <script src="https://d3js.org/topojson.v1.min.js"></script>
-  <script>
-
-
-  function getCentroid(selection) {
-    // get the DOM element from a D3 selection
-    // you could also use "this" inside .each()
-    var element = selection.node(),
-        // use the native SVG interface to get the bounding box
-        bbox = element.getBBox();
-    // return the center of the bounding box
-    return [bbox.x + bbox.width/2, bbox.y + bbox.height/2];
+body, h1, h2, h3, p {
+  margin: 0;
+  padding: 0;
+  font-family: 'Source Sans Pro', sans-serif;
+  font-size: 1em;
+  color: #333;
+  font-weight: 400;
 }
 
-    var width = 960;
-    var height = 600;
-    var centered;
-    var radius = Math.min(width, height) / 3;
+#content {
+  margin: 5px;
+  padding: 20px;
+  width: 805px;
+  border: 1px solid #ccc;
+}
 
-//Slider code: followed from https://bl.ocks.org/johnwalley/e1d256b81e51da68f7feb632a53c3518
+#map {
+  margin: 10px 0px 0px 0px;
+  padding: 0px;
+}
 
-    var dataTime = d3.range(0,50).map(function(d) {
-      return new Date(1968 + d, 10, 3);
-    });
+h1, h2 {
+  line-height: 1em;
+  font-size: 1.75em;
+  font-weight: 900;
+  color: #000;
+}
 
-    var sliderTime = d3
-    .sliderBottom()
-    .min(d3.min(dataTime))
-    .max(d3.max(dataTime))
-    .step(1000 * 60 * 60 * 24 * 365)
-    .width(1225)
-    .tickFormat(d3.timeFormat('%Y'))
-    .tickValues(dataTime)
-    .on('onchange', val => {
-      d3.select("#value-time").text(d3.timeFormat('%Y')(val));
-    });
+h2.year {
+  margin: 10px 0px 0px 0px;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+p {
+  margin: 10px 0px 0px 0px;
+}
+
+.county {
+  fill: #fff;
+}
+
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+}
+
+input {
+  display: block;
+  width: 200px;
+  margin: 10px 0px 0px 0px;
+}
+
+#legend text {
+  font-size: 0.9em;
+  color: #333;
+  font-weight: 400;
+}
+
+.tooltip {
+  position: absolute;
+  padding: 7px;
+  font-size: 0.9em;
+  pointer-events: none;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+
+  -moz-box-shadow:    3px 3px 10px 0px rgba(0, 0, 0, 0.25);
+  -webkit-box-shadow: 3px 3px 10px 0px rgba(0, 0, 0, 0.25);
+  box-shadow:         3px 3px 10px 0px rgba(0, 0, 0, 0.25);
+}
+
+.tooltip p {
+  margin: 0;
+  padding: 0;
+}
+
+.tooltip table {
+  margin: 0;
+  padding: 0;
+  border-collapse: collapse;
+}
+
+.wide {
+  width: 140px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="content">
+	<h1>Minimum Wage from 1986-2017</h1>
+	<h2 class="year"></h2>
+	<div class="slider"></div>
+	<div id="map"></div>
+	<p>Source: U.S Department of Labor.</p>
+</div>
+
+<script>
+
+var margin = {top: 20, right: 20, bottom: 20, left: 20};
+	width = 800 - margin.left - margin.right,
+	height = 500 - margin.top - margin.bottom,
+	formatPercent = d3.format(".1%");
+
+var svg = d3.select("#map").append("svg")
+  	.attr("width", width + margin.left + margin.right)
+  	.attr("height", height + margin.top + margin.bottom)
+  	.append("g")
+  		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      tooltip = d3.select("body").append("div")
+      	.attr("class", "tooltip")
+      	.style("opacity", 0);
+
+queue()
+	.defer(d3.json, "us.json")
+	.await(ready);
+
+var legendText = ["0.00", "", "1.00", "", "2.00", "", "3.00", "", "4.00", "", "5.00", "", "6.00", "", "7.00", "", "9.00", "", "10.00"];
+var legendColors = ["#e6ffe6", "#ccffcc", " #b3ffb3", "#99ff99", "#80ff80", "#66ff66", "#4dff4d", "#33ff33", "#1aff1a", "#00ff00", "#00e600", "#00cc00", "#00b300", "#009900", "#008000", "#006600", "#004d00", "#003300", "#001a00",
+                   "#000000"];
+
+function filterRows(data){
+
+}
+
+function ready(error, us) {
+
+  var states = topojson.feature(us, us.objects.states).features;
+
+  var data = [];
+  d3.csv("/data/Minimum_Wage_Data.csv", function(d){
+    for(i = 0; i < d.length; i++){
+		if(d[i].state == "District of Columbia" || d[i].state == "Federal (FLSA)")
+			continue;
+      data.push({
+        year: d[i].year,
+        state: d[i].state,
+        fips: d[i].fips,
+        table_data: d[i].table_data,
+        high_value: d[i].high_value,
+        low_value: d[i].low_value,
+        cpi: d[i].cpi,
+        high_2018: d[i].high_2018,
+        low_2018: d[i].low_2018
+      });
+    }
+     console.log(data);
+    var dataByStateByYear = d3.nest()
+      .key(function (data) { return data.fips; })
+      .key(function (data) { return data.year; })
+	  .map(data);
+	  
+    console.log(dataByStateByYear);
+    // So we need:
+    // The index of the object (sorted by FIPS)
+    // The Year
+    // The only item in the object, i.e an array
+    // And then the parameter that we need
+    console.log(dataByStateByYear[5][1980][0].state + " " + dataByStateByYear[5][1980][0].table_data);
+
+	// So somehow we need to get each state's properties and set their years
+	states.forEach(function(state) {
+		state.properties.years = dataByStateByYear[+state.id]
+	});
+	console.log(states.properties);
+    var color = d3.scale.threshold()
+      .domain([0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00])
+      .range(["#e6ffe6", "#ccffcc", " #b3ffb3", "#99ff99", "#80ff80", "#66ff66", "#4dff4d", "#33ff33", "#1aff1a",
+              "#00ff00", "#00e600", "#00cc00", "#00b300", "#009900", "#008000", "#006600", "#004d00", "#003300", "#001a00","#000000"]);
+      // The following lines draw the US map onto the screen
+      var projection = d3.geo.albersUsa().translate([width / 2, height / 2]);
+
+      var path = d3.geo.path().projection(projection);
+
+    var stateShapes = svg.selectAll(".state")
+        .data(states)
+        .enter()
+        .append("path")
+          .attr("class", "state")
+          .attr("d", path);
+
+    stateShapes
+    	.on("mouseover", function(d) {
+        	tooltip.transition()
+			.duration(250)
+			.style("opacity", 1);
+			tooltip.html(
+				"<p><strong>" + d.properties.years[1968][0].state + "</strong></p>"
+			)
+			.style("left", (d3.event.pageX + 15) + "px")
+			.style("top", (d3.event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+          tooltip.transition().duration(250).style("opacity", 0);
+        });
+
+        svg.append("path")
+         .datum(topojson.feature(us,us.objects.states, function(a,b) { return a !==b; }))
+           .attr("class", "states")
+           .attr("d", path);
+
+        var legend = svg.append("g")
+         .attr("id", "legend");
+
+         var legenditem = legend.selectAll(".legenditem")
+           .data(d3.range(21))
+           .enter()
+           .append("g")
+             .attr("class", "legenditem")
+			 .attr("transform", function(d,i) { return "translate(" + i * 23 + ",0)"; });
+			 
+		legenditem.append("text")
+			.attr("x", width-440)
+			.attr("y", -10)
+			.style("text-anchor", "right")
+			.text(function(d,i) { return legendText[i]; }); 
+
+        legenditem.append("rect")
+         .attr("x", width-440)
+         .attr("y", -7)
+         .attr("width", 100)
+         .attr("height", 6)
+         .attr("class", "rect")
+         .style("fill", function(d,i) { return legendColors[i]; });
+
+       function update(year){
+         slider.property("value", year);
+         d3.select(".year").text(year);
+         stateShapes.style("fill", function(d) {
+		   console.log(d.properties.years[year][0])
+           return color(Math.floor(d.properties.years[year][0].table_data))
+         });
+       }
+
+       var slider = d3.select(".slider")
+           .append("input")
+             .attr("type", "range")
+             .attr("min", 1968)
+             .attr("max", 2017)
+             .attr("step", 1)
+             .on("input", function() {
+               var year = this.value;
+               update(year);
+             });
+        update(1968);
+
+  });
 
 
-  var gTime = d3
-    .select('#slider-time')
-    .append('svg')
-    .attr('width', 1280)
-    .attr('height', 100)
-    .append('g')
-    .attr('transform', 'translate(30,30)');
+}
 
-  gTime.call(sliderTime);
-
-  d3.select('#value-time').text(d3.timeFormat('%Y')(sliderTime.value()));
-
-
-/* Rest of the code?
-    var projection = d3.geo.albersUsa()
-                           .scale(1280)
-                           .translate([width/2, height/2 + 20]);
-
-    var path = d3.geo.path().projection(projection);
-
-    var svg = d3.select("body").append("svg")
-        .attr("width", width)
-        .attr("height", height);
-
-    var g = svg.append("g");
-
-    var color = d3.scale.ordinal()
-    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
-
-    var state_ids = [ 0 ];
-    var id_state_map = {
-        0: ""
-    };
-
-    var id_name_map = {
-        0: null
-    };
-
-    var short_name_id_map = {
-        0: null
-    };
-
-var minWageData = {};
-// Min wage code:
-
-d3.csv('Minimum_Wage_Data.csv', function(error, data) {
-    console.log(data);
-});
-*/
-  </script>
+d3.select(self.frameElement).style("height", "685px");
+</script>
 
 </body>
 </html>
