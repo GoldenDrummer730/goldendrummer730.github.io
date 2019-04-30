@@ -136,23 +136,21 @@ queue()
 	.defer(d3.json, "us.json")
 	.await(ready);
 
-var legendText = ["0.00", "", "1.00", "", "2.00", "", "3.00", "", "4.00", "", "5.00", "", "6.00", "", "7.00", "", "9.00", "", "10.00"];
-var legendColors = ["#e6ffe6", "#ccffcc", " #b3ffb3", "#99ff99", "#80ff80", "#66ff66", "#4dff4d", "#33ff33", "#1aff1a", "#00ff00", "#00e600", "#00cc00", "#00b300", "#009900", "#008000", "#006600", "#004d00", "#003300", "#001a00",
-                   "#000000"];
-
-function filterRows(data){
-
-}
+//var legendText = ["0.00", "", "1.00", "", "2.00", "", "3.00", "", "4.00", "", "5.00", "", "6.00", "", "7.00", "", "9.00", "", "10.00"];
+var legendText = ["", "0.00", "", "2.00","", "4.00", "", "6.00", "", "8.00", "", "10.00+"];
+var legendColors = ["#e6ffe6", "#ccffcc", " #b3ffb3", "#99ff99", "#80ff80", "#66ff66", "#4dff4d", "#33ff33", 
+"#1aff1a", "#00ff00", "#00e600", "#00cc00"];
 
 function ready(error, us) {
 
-  var states = topojson.feature(us, us.objects.states).features;
+  var states = topojson.feature(us, us.objects.states);
 
   var data = [];
   d3.csv("Minimum_Wage_Data.csv", function(d){
     for(i = 0; i < d.length; i++){
-		if(d[i].state == "District of Columbia" || d[i].state == "Federal (FLSA)")
-			continue;
+		if(d[i].state == "District of Columbia" || d[i].state == "Federal (FLSA)"){
+      continue;
+    }
       data.push({
         year: d[i].year,
         state: d[i].state,
@@ -177,67 +175,77 @@ function ready(error, us) {
     // The Year
     // The only item in the object, i.e an array
     // And then the parameter that we need
-    console.log(dataByStateByYear[5][1980][0].state + " " + dataByStateByYear[5][1980][0].table_data);
+    console.log(dataByStateByYear[41][1972][0].state + " " + dataByStateByYear[41][1972][0].table_data);
 
 	// So somehow we need to get each state's properties and set their years
-	states.forEach(function(state) {
+	states.features.forEach(function(state) {
 		state.properties.years = dataByStateByYear[+state.id]
-	});
-	console.log(states.properties);
+  });
+  
+
+  states.features.splice(8,1);
+  states.features.splice(51,1);
+  console.log(states.features)
+	console.log(typeof states.features[0].properties.years);
     var color = d3.scale.threshold()
       .domain([0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00])
       .range(["#e6ffe6", "#ccffcc", " #b3ffb3", "#99ff99", "#80ff80", "#66ff66", "#4dff4d", "#33ff33", "#1aff1a",
-              "#00ff00", "#00e600", "#00cc00", "#00b300", "#009900", "#008000", "#006600", "#004d00", "#003300", "#001a00","#000000"]);
+              "#00ff00", "#00e600",  "#00cc00"]);
       // The following lines draw the US map onto the screen
       var projection = d3.geo.albersUsa().translate([width / 2, height / 2]);
 
       var path = d3.geo.path().projection(projection);
-
+    
+    var year = 1968;
     var stateShapes = svg.selectAll(".state")
-        .data(states)
+        .data(states.features)
         .enter()
         .append("path")
           .attr("class", "state")
           .attr("d", path);
 
     stateShapes
-    	.on("mouseover", function(d) {
+    	.on("mouseover", function(d,i) {
         	tooltip.transition()
 			.duration(250)
-			.style("opacity", 1);
+      .style("opacity", 1);
+      console.log(d.properties.years);
 			tooltip.html(
-				"<p><strong>" + d.properties.years[1968][0].state + "</strong></p>"
+        "<p><strong>" + d.properties.years[year][0].state + "</strong></p>" + 
+        "<table><tbody>" + 
+        "<tr><td class = 'wide'> Year: </td><td>" + year + "</td></tr>" + 
+        "<tr><td class = 'wide'> Minimum Wage: </td><td>$" + d.properties.years[year][0].table_data + "</td></tr>"
 			)
 			.style("left", (d3.event.pageX + 15) + "px")
 			.style("top", (d3.event.pageY - 28) + "px");
         })
-        .on("mouseout", function(d) {
-          tooltip.transition().duration(250).style("opacity", 0);
-        });
+      .on("mouseout", function(d) {
+        tooltip.transition().duration(250).style("opacity", 0);
+      });
 
-        svg.append("path")
-         .datum(topojson.feature(us,us.objects.states, function(a,b) { return a !==b; }))
-           .attr("class", "states")
-           .attr("d", path);
+	svg.append("path")
+	 .datum(topojson.feature(us,us.objects.states, function(a,b) { return a !==b; }))
+	   .attr("class", "states")
+	   .attr("d", path);
 
-        var legend = svg.append("g")
-         .attr("id", "legend");
+	var legend = svg.append("g")
+	 .attr("id", "legend");
 
-         var legenditem = legend.selectAll(".legenditem")
-           .data(d3.range(21))
-           .enter()
-           .append("g")
-             .attr("class", "legenditem")
-			 .attr("transform", function(d,i) { return "translate(" + i * 23 + ",0)"; });
+	 var legenditem = legend.selectAll(".legenditem")
+	   .data(d3.range(13))
+	   .enter()
+	   .append("g")
+	      .attr("class", "legenditem")
+				.attr("transform", function(d,i) { return "translate(" + i * 31 + ",0)"; });
 			 
-		legenditem.append("text")
-			.attr("x", width-440)
-			.attr("y", -10)
-			.style("text-anchor", "right")
-			.text(function(d,i) { return legendText[i]; }); 
+	legenditem.append("text")
+		.attr("x", width-350)
+		.attr("y", -10)
+		.style("text-anchor", "middle")
+		.text(function(d,i) { return legendText[i]; }); 
 
         legenditem.append("rect")
-         .attr("x", width-440)
+         .attr("x", width-350)
          .attr("y", -7)
          .attr("width", 100)
          .attr("height", 6)
@@ -248,21 +256,24 @@ function ready(error, us) {
          slider.property("value", year);
          d3.select(".year").text(year);
          stateShapes.style("fill", function(d) {
-		   console.log(d.properties.years[year][0])
+           for(i = 0; i < d.length; i++){
+             if(d.properties.year[year][0] == null)
+              continue;
+           }
            return color(Math.floor(d.properties.years[year][0].table_data))
          });
        }
 
        var slider = d3.select(".slider")
-           .append("input")
-             .attr("type", "range")
-             .attr("min", 1968)
-             .attr("max", 2017)
-             .attr("step", 1)
-             .on("input", function() {
-               var year = this.value;
-               update(year);
-             });
+          .append("input")
+            .attr("type", "range")
+            .attr("min", 1968)
+            .attr("max", 2017)
+            .attr("step", 1)
+            .on("input", function() {
+              year = this.value;
+              update(year);
+            });
         update(1968);
 
   });
