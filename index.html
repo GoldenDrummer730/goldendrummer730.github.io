@@ -163,30 +163,30 @@ function ready(error, us) {
         low_2018: d[i].low_2018
       });
     }
-     console.log(data);
+
     var dataByStateByYear = d3.nest()
       .key(function (data) { return data.fips; })
       .key(function (data) { return data.year; })
 	  .map(data);
 	  
-    console.log(dataByStateByYear);
+
     // So we need:
     // The index of the object (sorted by FIPS)
     // The Year
     // The only item in the object, i.e an array
     // And then the parameter that we need
-    console.log(dataByStateByYear[41][1972][0].state + " " + dataByStateByYear[41][1972][0].table_data);
+    // console.log(dataByStateByYear[41][1972][0].state + " " + dataByStateByYear[41][1972][0].table_data);
 
 	// So somehow we need to get each state's properties and set their years
 	states.features.forEach(function(state) {
 		state.properties.years = dataByStateByYear[+state.id]
   });
   
-
-  states.features.splice(8,1);
-  states.features.splice(51,1);
-  console.log(states.features)
-	console.log(typeof states.features[0].properties.years);
+	// For some reason undefined data appears so we can just get rid of it since we have 50 states and this 
+	// gave us more than 50 data points
+  	states.features.splice(8,1);
+  	states.features.splice(51,1);
+	  
     var color = d3.scale.threshold()
       .domain([0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00])
       .range(["#e6ffe6", "#ccffcc", " #b3ffb3", "#99ff99", "#80ff80", "#66ff66", "#4dff4d", "#33ff33", "#1aff1a",
@@ -209,7 +209,6 @@ function ready(error, us) {
         	tooltip.transition()
 			.duration(250)
       .style("opacity", 1);
-      console.log(d.properties.years);
 			tooltip.html(
         "<p><strong>" + d.properties.years[year][0].state + "</strong></p>" + 
         "<table><tbody>" + 
