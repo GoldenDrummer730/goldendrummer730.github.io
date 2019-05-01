@@ -108,7 +108,7 @@ input {
 <body>
 
 <div id="content">
-	<h1>Minimum Wage from 1986-2017</h1>
+	<h1>Minimum Wage from 1968-2017</h1>
 	<h2 class="year"></h2>
 	<div class="slider"></div>
 	<div id="map"></div>
@@ -211,9 +211,13 @@ function ready(error, us) {
       .style("opacity", 1);
 			tooltip.html(
         "<p><strong>" + d.properties.years[year][0].state + "</strong></p>" + 
-        "<table><tbody>" + 
-        "<tr><td class = 'wide'> Year: </td><td>" + year + "</td></tr>" + 
-        "<tr><td class = 'wide'> Minimum Wage: </td><td>$" + d.properties.years[year][0].table_data + "</td></tr>"
+                  "<table><tbody>" + 
+                  "<tr><td class = 'wide'> Year: </td><td>" + year + "</td></tr>" + 
+                  "<tr><td class = 'wide'> Minimum Wage: </td><td>" + formatter.format(d.properties.years[year][0].table_data) + "</td></tr>" +
+                  "<tr><td class = 'wide'> CPI: </td><td>" + d.properties.years[year][0].cpi + "</td></tr>" +
+                  "<tr><td class = 'wide'> Amount Earned per Week: </td><td>" + formatter.format(d.properties.years[year][0].table_data * 40) + "</td></tr>" +
+                  "<tr><td class = 'wide'> Amount Earned per Year: </td><td>" + formatter.format(d.properties.years[year][0].table_data * 40 * 52)+ "</td></tr>"
+             
 			)
 			.style("left", (d3.event.pageX + 15) + "px")
 			.style("top", (d3.event.pageY - 28) + "px");
