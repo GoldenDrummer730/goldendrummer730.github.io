@@ -116,7 +116,13 @@ input {
 </div>
 
 <script>
-
+// https://flaviocopes.com/how-to-format-number-as-currency-javascript/
+const formatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2
+});
+	
 var margin = {top: 20, right: 20, bottom: 20, left: 20};
 	width = 800 - margin.left - margin.right,
 	height = 500 - margin.top - margin.bottom,
